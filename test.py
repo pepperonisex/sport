@@ -16,6 +16,65 @@ def col_num_to_letter(col_num):
         letter = chr(remainder + ord('A')) + letter
     return letter
 
+def create_range(sheet_id, start_row, end_row, start_col, end_col):
+    return {
+        "sheetId": sheet_id,
+        "startRowIndex": start_row,
+        "endRowIndex": end_row,
+        "startColumnIndex": start_col,
+        "endColumnIndex": end_col
+    }
+
+def create_color_request(range_info, color_info):
+    return {
+        "repeatCell": {
+            "range": range_info,
+            "cell": {
+                "userEnteredFormat": {
+                    "backgroundColor": color_info
+                }
+            },
+            "fields": "userEnteredFormat.backgroundColor"
+        }
+    }
+
+def create_border_request(range_info):
+    return {
+        "updateBorders": {
+            "range": range_info,
+            "top": {
+                "style": "SOLID",
+                "width": 1,
+                "color": {"red": 0, "green": 0, "blue": 0}
+            },
+            "bottom": {
+                "style": "SOLID",
+                "width": 1,
+                "color": {"red": 0, "green": 0, "blue": 0}
+            },
+            "left": {
+                "style": "SOLID",
+                "width": 1,
+                "color": {"red": 0, "green": 0, "blue": 0}
+            },
+            "right": {
+                "style": "SOLID",
+                "width": 1,
+                "color": {"red": 0, "green": 0, "blue": 0}
+            },
+            "innerHorizontal": {
+                "style": "SOLID",
+                "width": 1,
+                "color": {"red": 0, "green": 0, "blue": 0}
+            },
+            "innerVertical": {
+                "style": "SOLID",
+                "width": 1,
+                "color": {"red": 0, "green": 0, "blue": 0}
+            }
+        }
+    }
+
 scope = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
 creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
 client = gspread.authorize(creds)
@@ -42,103 +101,42 @@ end_col_index = start_col_index + len(headers) - 1
 start_row_index = spawn_row - 1
 end_row_index = start_row_index + max_length  
 
-all_range = {
-    "sheetId": worksheet._properties['sheetId'],
-    "startRowIndex": start_row_index,
-    "endRowIndex": end_row_index + 1,
-    "startColumnIndex": start_col_index - 1,
-    "endColumnIndex": end_col_index + 1
+sheet_id = worksheet._properties['sheetId']
+
+ranges_colors = {
+    "all_range": (create_range(sheet_id, start_row_index, end_row_index + 1, start_col_index - 1, end_col_index + 1), {"red": 1.0, "green": 0.0, "blue": 0.0, "alpha": 1}),  # Rouge vif
+    "date_range": (create_range(sheet_id, start_row_index, end_row_index + 1, start_col_index - 1, start_col_index), {"red": 0.0, "green": 1.0, "blue": 0.0, "alpha": 1}),  # Vert vif
+    "cols_headers_range": (create_range(sheet_id, start_row_index, start_row_index + 1, start_col_index + 1, end_col_index + 1), {"red": 0.0, "green": 0.0, "blue": 1.0, "alpha": 1}),  # Bleu vif
+    "rows_headers_range": (create_range(sheet_id, start_row_index + 1, end_row_index + 1, start_col_index, start_col_index + 1), {"red": 1.0, "green": 1.0, "blue": 0.0, "alpha": 1}),  # Jaune vif
+    "table_range": (create_range(sheet_id, start_row_index, end_row_index + 1, start_col_index, end_col_index + 1), {"red": 0.0, "green": 1.0, "blue": 1.0, "alpha": 1}),  # Cyan vif
+    "table_value_range": (create_range(sheet_id, start_row_index + 1, end_row_index + 1, start_col_index + 1, end_col_index + 1), {"red": 1.0, "green": 0.5, "blue": 0.0, "alpha": 1}),  # Orange vif
+    "program_name_range": (create_range(sheet_id, start_row_index, start_row_index + 1, start_col_index, start_col_index + 1), {"red": 1.0, "green": 0.0, "blue": 1.0, "alpha": 1}),  # Magenta vif
 }
-all_range_color = {"red": 56.0, "green": 90.0, "blue": 10.0, "alpha": 1}
-
-date_range = {
-    "sheetId": worksheet._properties['sheetId'],
-    "startRowIndex": start_row_index,
-    "endRowIndex": end_row_index + 1,
-    "startColumnIndex": start_col_index - 1,
-    "endColumnIndex": start_col_index
-}
-date_range_color = {"red": 56.0, "green": 90.0, "blue": 90.0, "alpha": 1}
-
-cols_headers_range = {
-    "sheetId": worksheet._properties['sheetId'],
-    "startRowIndex": start_row_index,
-    "endRowIndex": start_row_index + 1,
-    "startColumnIndex": start_col_index + 1,
-    "endColumnIndex": end_col_index + 1
-}
-cols_headers_range_color = {"red": 56.0, "green": 90.0, "blue": 10.0, "alpha": 1}
-
-rows_headers_range = {
-    "sheetId": worksheet._properties['sheetId'],
-    "startRowIndex": start_row_index + 1,
-    "endRowIndex": end_row_index + 1,
-    "startColumnIndex": start_col_index,
-    "endColumnIndex": start_col_index + 1
-}
-rows_headers_range_color = {"red": 5.0, "green": 70.0, "blue": 80.0, "alpha": 1}
-
-program_name_range = {
-    "sheetId": worksheet._properties['sheetId'],
-    "startRowIndex": start_row_index,
-    "endRowIndex": start_row_index + 1,
-    "startColumnIndex": start_col_index,
-    "endColumnIndex": start_col_index + 1
-}
-program_name_range_color = {"red": 56.0, "green": 10.0, "blue": 48.0, "alpha": 1}
-
-table_range = {
-    'sheetId': worksheet._properties['sheetId'],
-    'startRowIndex': spawn_row - 1,
-    'endRowIndex': end_row_index + 1,
-    'startColumnIndex': start_col_index,
-    'endColumnIndex': end_col_index + 1
-}
-program_name_range_color = {"red": 40.0, "green": 90.0, "blue": 62.0, "alpha": 1}
-
-table_value_range = {
-    "sheetId": worksheet._properties['sheetId'],
-    "startRowIndex": start_row_index + 1,
-    "endRowIndex": end_row_index + 1,
-    "startColumnIndex": start_col_index + 1,
-    "endColumnIndex": end_col_index + 1
-}
-table_value_range_color = {"red": 90.0, "green": 10.0, "blue": 10.0, "alpha": 1}
-
-ranges_and_colors = [
-    (all_range, all_range_color),
-    (date_range, date_range_color),
-    (cols_headers_range, cols_headers_range_color),
-    (rows_headers_range, rows_headers_range_color),
-    (program_name_range, program_name_range_color),
-    (table_value_range, table_value_range_color)
-]
-
 
 static_requests = [
     {
         "mergeCells": {
             "mergeType": "MERGE_COLUMNS",
-            "range": date_range
+            "range": ranges_colors["date_range"][0]
         }
     },
     {
         'updateCells': {
             'rows': [{'values': [{'userEnteredValue': {'stringValue': str(cell)}} for cell in row]} for row in data],
             'fields': 'userEnteredValue',
-            'range': table_range
+            'range': ranges_colors["table_range"][0]
         },
     },
     {
         'updateCells': {
             'rows': [{'values': [{'userEnteredValue': {'stringValue': current_date}}]}],
             'fields': 'userEnteredValue',
-            'range': date_range
+            'range': ranges_colors["date_range"][0]
         }
     },
     {
         "repeatCell": {
-            "range": date_range,
+            "range": ranges_colors["date_range"][0],
             "cell": {
                 "userEnteredFormat": {
                     "horizontalAlignment": "CENTER",
@@ -150,7 +148,7 @@ static_requests = [
     },
     {
         "repeatCell": {
-            "range": table_range,
+            "range": ranges_colors["all_range"][0],
             "cell": {
                 "userEnteredFormat": {
                     "horizontalAlignment": "CENTER"
@@ -161,23 +159,14 @@ static_requests = [
     }
 ]
 
-color_requests = [
-    {
-        "repeatCell": {
-            "range": range_info,
-            "cell": {
-                "userEnteredFormat": {
-                    "backgroundColor": color_info
-                }
-            },
-            "fields": "userEnteredFormat.backgroundColor"
-        }
-    } for range_info, color_info in ranges_and_colors
-]
 
-requests = static_requests + color_requests
+color_requests = [create_color_request(rng, color) for rng, color in ranges_colors.values()]
+border_requests = [create_border_request(ranges_colors["all_range"][0])]
+
+requests = static_requests + color_requests + border_requests
 
 formatted_json = json.dumps(requests, indent=4)
 print(formatted_json)
 
 spreadsheet.batch_update({'requests': requests})
+

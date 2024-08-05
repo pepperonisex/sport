@@ -4,3 +4,5 @@ def afficher_menu_principal(programmes):
         print(f"{index} - {programme}")
     print(f"{len(programmes) + 1} - Poid")
     print("0 - Quitter")
+
+
