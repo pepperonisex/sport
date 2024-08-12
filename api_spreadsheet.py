@@ -2,8 +2,9 @@ import gspread
 import json
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
-import config
+from config import *
 import locale
+from database import *
 
 def col_letter_to_num(col_letter):
     num = 0
@@ -18,12 +19,12 @@ def col_num_to_letter(col_num):
         letter = chr(remainder + ord('A')) + letter
     return letter
 
-def create_range(sheet_id, start_row, end_row, start_col, end_col):
+def create_range(sheet_id, default_row, end_row, default_col, end_col):
     return {
         "sheetId": sheet_id,
-        "startRowIndex": start_row,
+        "startRowIndex": default_row,
         "endRowIndex": end_row,
-        "startColumnIndex": start_col,
+        "startColumnIndex": default_col,
         "endColumnIndex": end_col
     }
 
@@ -77,46 +78,44 @@ def create_border_request(range_info):
         }
     }
 
-def update_spreadsheet(spreadsheet : gspread.Spreadsheet, current_date, program_name, workout_data, commentaire):
+def update_spreadsheet(conn, spreadsheet : gspread.Spreadsheet, current_date : datetime, program_name, workout_data, commentaire):
     
     original_locale = locale.getlocale(locale.LC_TIME)
     locale.setlocale(locale.LC_TIME, 'fr_FR')
-    current_date2 = datetime.now()
-    worksheet_name = current_date2.strftime("%B_%Y")
+    
+    current_date_worskeet = datetime.now()
+    worksheet_name = current_date_worskeet.strftime("%B_%Y")
 
-    worksheet_exists = False
-    for sheet in spreadsheet.worksheets():
-        if sheet.title == worksheet_name:
-            worksheet_exists = True
-            worksheet = sheet 
-            break
+    worksheet = next((sheet for sheet in spreadsheet.worksheets() if sheet.title == worksheet_name), None)
 
-    if not worksheet_exists:
+    if worksheet is None:
         worksheet = spreadsheet.add_worksheet(title=worksheet_name, rows="1000", cols="26")
+        add_worksheet_info(conn, worksheet.id, default_col, default_row)
+        worksheet_info = get_worksheet_info_by_id(conn, worksheet.id)
         print(f"Nouvelle worksheet créée: {worksheet_name}")
     else:
+        worksheet_info = get_worksheet_info_by_id(conn, worksheet.id)
+        if not worksheet_info:
+            add_worksheet_info(conn, worksheet.id, default_col, default_row)
         print(f"Une worksheet avec le nom {worksheet.title} existe déjà.")
-
+    
+    worksheet_info = get_worksheet_info_by_id(conn, worksheet.id)
+    
     locale.setlocale(locale.LC_TIME, original_locale)
     
-    headers = [program_name] + [exercise.capitalize() for exercise in workout_data.keys()]
-    max_length = max(len(v) for v in workout_data.values())
-    data = [headers] + [[f"série {i + 1}"] + [workout_data[exercise][i] if i < len(workout_data[exercise]) else "" for exercise in workout_data] for i in range(max_length)]
-
-    first_spawn_col = "B"
-    first_spawn_row = 3
-
-    start_col_index = col_letter_to_num(first_spawn_col)
-    end_col_index = start_col_index + len(headers) - 1
-    start_row_index = first_spawn_row - 1
-    end_row_index = start_row_index + max_length  
-
-
-    offset_between_tables = 2
     
-    col_values = worksheet.col_values(start_col_index)
-    first_spawn_row = col_values[-1].row_value + offset_between_tables
-    print(first_spawn_row)
+    current_col, current_row, last_updated = worksheet_info[2], worksheet_info[3], worksheet_info[4]
+    
+    headers = [program_name] + [exercise.capitalize() for exercise in workout_data.keys()]
+    max_height = max(len(v) for v in workout_data.values())
+    max_width = len(headers)
+    data = [headers] + [[f"série {i + 1}"] + [workout_data[exercise][i] if i < len(workout_data[exercise]) else "" for exercise in workout_data] for i in range(max_height)]
+
+    start_col_index = col_letter_to_num(current_col)
+    end_col_index = start_col_index + len(headers) - 1
+    start_row_index = current_row - 1
+    end_row_index = start_row_index + max_height  
+    
     sheet_id = worksheet._properties['sheetId']
 
     ranges_colors = {
@@ -152,7 +151,7 @@ def update_spreadsheet(spreadsheet : gspread.Spreadsheet, current_date, program_
         },
         {
             'updateCells': {
-                'rows': [{'values': [{'userEnteredValue': {'stringValue': current_date}}]}],
+                'rows': [{'values': [{'userEnteredValue': {'stringValue': current_date.strftime('%Y-%m-%d')}}]}],
                 'fields': 'userEnteredValue',
                 'range': ranges_colors["date_range"][0]
             }
@@ -208,9 +207,20 @@ def update_spreadsheet(spreadsheet : gspread.Spreadsheet, current_date, program_
     requests = static_requests + color_requests + border_requests
     spreadsheet.batch_update({'requests': requests})
 
+    last_updated = datetime.strptime(last_updated, '%Y-%m-%d').date()
+    if last_updated == current_date.date():
+        new_next_col = col_num_to_letter(col_letter_to_num(current_col) + space_between_col + max_width + 2)
+        new_next_row = current_row
+    else:
+        new_next_col = default_col
+        new_next_row = current_row + space_between_row + max_height
+
+    update_worksheet_info(conn, sheet_id, new_next_col, new_next_row)
+    
 
 if __name__ == "__main__":
-    current_date = datetime.now().strftime("%Y-%m-%d")
+    conn = setup_database()
+    current_date = datetime.now()
     program_name = "Programme 1"
     workout_data = {
         'pompes': [15, 16],
@@ -226,4 +236,5 @@ if __name__ == "__main__":
     client = gspread.authorize(creds)
     spreadsheet = client.open_by_key('16QakQHtFK7TTm5c8-bDBHqSul7BYRNzERqPy6xpYK7M')
 
-    update_spreadsheet(spreadsheet, current_date, program_name, workout_data, commentaire)
+    update_spreadsheet(conn, spreadsheet, current_date, program_name, workout_data, commentaire)
+    conn.close()

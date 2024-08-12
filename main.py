@@ -2,9 +2,10 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import menus  
 import datetime
-import json  # Importation de JSON pour faciliter le formatage des données
+import json 
+from api_spreadsheet import update_spreadsheet
+from database import *
 
-# Configuration initiale similaire à celle fournie
 scope = [
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/drive'
@@ -30,23 +31,17 @@ def charger_programmes():
             programmes[programme_name] = exercices
     return programmes
 
-def save_poid(worksheet_poids, poid):
-    current_date = datetime.datetime.now().strftime("%d/%m/%Y")
+def save_poid(worksheet_poids, current_date, poid):
     poids = worksheet_poids.col_values(1)
     next_row = len(poids) + 1
     worksheet_poids.update_cell(next_row, 1, current_date)
     worksheet_poids.update_cell(next_row, 2, poid)
 
-def save_seance(worksheet_seances, nom_programme, series_repetitions, commentaire):
-    current_date = datetime.datetime.now().strftime("%d/%m/%Y")
-    max_series = max(len(reps) for reps in series_repetitions.values()) if series_repetitions else 0
+def save_seance(conn, current_date, spreadsheet, nom_programme, series_repetitions, commentaire):
+    update_spreadsheet(conn, spreadsheet, current_date, nom_programme, series_repetitions, commentaire)
+    
 
-    print(series_repetitions)
-
-
-
-
-def menu_principal(programmes):
+def menu_principal(conn, programmes, current_date):
     while True:
         menus.afficher_menu_principal(programmes)
         choix = input("Choix : ")
@@ -69,14 +64,14 @@ def menu_principal(programmes):
                                 series_repetitions[exercice].append(int(reps))
                                 print(f"{exercice}: {reps} répétitions ajoutées.")
                 commentaire = input("Commentaire pour la séance : ")
-                save_seance(worksheet_seances, nom_programme, series_repetitions, commentaire)
+                save_seance(conn, current_date, spreadsheet, nom_programme, series_repetitions, commentaire)
                 print(f"Récapitulatif pour le programme {nom_programme}:")
                 for exercice, series in series_repetitions.items():
                     series_str = ', '.join(map(str, series))
                     print(f"{exercice}: Séries -> {series_str}")
             elif choix_int == len(programmes) + 1:
                 poid = input("Poids actuel (en kg) : ")
-                save_poid(worksheet_poids, poid)
+                save_poid(worksheet_poids, current_date, poid)
             elif choix_int == 0:
                 print("Fermeture de l'application de musculation.")
                 break
@@ -86,5 +81,9 @@ def menu_principal(programmes):
             print("Entrée invalide.")
 
 if __name__ == "__main__":
+    print("hello")
+    conn = setup_database()
+    current_date = datetime.now()
     programmes = charger_programmes()
-    menu_principal(programmes)
+    menu_principal(conn, programmes, current_date)
+    conn.close()
