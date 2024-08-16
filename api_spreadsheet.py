@@ -78,18 +78,33 @@ def create_border_request(range_info):
         }
     }
 
-def update_spreadsheet(conn, spreadsheet : gspread.Spreadsheet, current_date : datetime, program_name, workout_data, commentaire):
+def update_spreadsheet(conn, spreadsheet : gspread.Spreadsheet, date : datetime, program_name, workout_data, commentaire):
     
     original_locale = locale.getlocale(locale.LC_TIME)
     locale.setlocale(locale.LC_TIME, 'fr_FR')
-    
-    current_date_worskeet = datetime.now()
-    worksheet_name = current_date_worskeet.strftime("%B_%Y")
+
+    worksheet_name = date.strftime("%B_%Y")
 
     worksheet = next((sheet for sheet in spreadsheet.worksheets() if sheet.title == worksheet_name), None)
 
     if worksheet is None:
         worksheet = spreadsheet.add_worksheet(title=worksheet_name, rows="1000", cols="26")
+        requests = {
+            "requests": [
+                {
+                    "updateSheetProperties": {
+                        "properties": {
+                            "sheetId": worksheet.id,
+                            "gridProperties": {
+                                "hideGridlines": True,
+                            }
+                        },
+                        "fields": "gridProperties.hideGridlines",
+                    }
+                }
+            ]
+        }
+        spreadsheet.batch_update(requests)
         add_worksheet_info(conn, worksheet.id, default_col, default_row)
         worksheet_info = get_worksheet_info_by_id(conn, worksheet.id)
         print(f"Nouvelle worksheet créée: {worksheet_name}")

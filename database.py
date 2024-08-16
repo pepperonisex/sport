@@ -1,8 +1,11 @@
 import sqlite3
+import os
 from datetime import datetime
 
-def setup_database(db_name="database.db"):
-    conn = sqlite3.connect(db_name)
+def setup_database(db_name="database.db", db_dir="/db"):
+    os.makedirs(db_dir, exist_ok=True)
+    full_path = os.path.join(db_dir, db_name)
+    conn = sqlite3.connect(full_path)
     with conn:
         conn.execute('''
         CREATE TABLE IF NOT EXISTS worksheet_info (
