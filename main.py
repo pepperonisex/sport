@@ -104,7 +104,7 @@ def menu_principal(conn, programmes, current_date, spreadsheet, worksheet_poids)
                     commentaire = input("Commentaire pour la séance : ")
                     date = input_date("Date (DD/MM/YYYY) ?", default_date=current_date)
                     
-                    execute_with_loading("Sauvegarde de la session", update_spreadsheet, conn, date, spreadsheet, nom_programme, series_repetitions, commentaire)
+                    execute_with_loading("Sauvegarde de la session", update_spreadsheet, conn, spreadsheet, date, nom_programme, series_repetitions, commentaire)
                     print(f"Récapitulatif pour le programme {nom_programme}:")
                     for exercice, series in series_repetitions.items():
                         series_str = ', '.join(map(str, series))

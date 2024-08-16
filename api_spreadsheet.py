@@ -166,7 +166,7 @@ def update_spreadsheet(conn, spreadsheet : gspread.Spreadsheet, date : datetime,
         },
         {
             'updateCells': {
-                'rows': [{'values': [{'userEnteredValue': {'stringValue': current_date.strftime('%Y-%m-%d')}}]}],
+                'rows': [{'values': [{'userEnteredValue': {'stringValue': date.strftime('%Y-%m-%d')}}]}],
                 'fields': 'userEnteredValue',
                 'range': ranges_colors["date_range"][0]
             }
@@ -223,7 +223,7 @@ def update_spreadsheet(conn, spreadsheet : gspread.Spreadsheet, date : datetime,
     spreadsheet.batch_update({'requests': requests})
 
     last_updated = datetime.strptime(last_updated, '%Y-%m-%d').date()
-    if last_updated == current_date.date():
+    if last_updated == date.date():
         new_next_col = col_num_to_letter(col_letter_to_num(current_col) + space_between_col + max_width + 2)
         new_next_row = current_row
     else:
