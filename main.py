@@ -72,11 +72,12 @@ def charger_programmes(worksheet_programmes):
             programmes[programme_name] = exercices
     return programmes
 
-def save_poid(worksheet_poids, date : datetime, poid):
+def save_poid(worksheet_poids, date : datetime, poid, commentaire):
     poids = worksheet_poids.col_values(1)
     next_row = len(poids) + 1
     worksheet_poids.update_cell(next_row, 1, date.strftime('%Y-%m-%d'))
     worksheet_poids.update_cell(next_row, 2, poid)
+    worksheet_poids.update_cell(next_row, 3, commentaire)
 
 
 def menu_principal(conn, programmes, current_date, spreadsheet, worksheet_poids):
@@ -89,20 +90,19 @@ def menu_principal(conn, programmes, current_date, spreadsheet, worksheet_poids)
                     nom_programme = list(programmes.keys())[choix_int - 1]
                     exercices = programmes[nom_programme]
                     print(f"Programme sélectionné : {nom_programme}")
+                    date = input_date(default_date=current_date)
                     series_repetitions = {}
                     for exercice in exercices:
                         series_repetitions[exercice] = []
                         print(f"Répétitions pour {exercice}.")
                         while True:
                             reps = input(f"Nombre de répétitions pour {exercice} (0 pour suivant) : ")
-                            if reps.isdigit():
-                                if reps == '0':
-                                    break
-                                else:
-                                    series_repetitions[exercice].append(int(reps))
-                                    print(f"{exercice}: {reps} répétitions ajoutées.")
+                            if reps == '0' or reps == "":
+                                break
+                            else:
+                                series_repetitions[exercice].append(reps)
+                                print(f"{exercice}: {reps} répétitions ajoutées.")
                     commentaire = input("Commentaire pour la séance : ")
-                    date = input_date("Date (DD/MM/YYYY) ?", default_date=current_date)
                     
                     execute_with_loading("Sauvegarde de la session", update_spreadsheet, conn, spreadsheet, date, nom_programme, series_repetitions, commentaire)
                     print(f"Récapitulatif pour le programme {nom_programme}:")
@@ -110,9 +110,10 @@ def menu_principal(conn, programmes, current_date, spreadsheet, worksheet_poids)
                         series_str = ', '.join(map(str, series))
                         print(f"{exercice}: Séries -> {series_str}")
                 elif choix_int == len(programmes) + 1:
+                    date = input_date(default_date=current_date)
                     poid = input("Poids actuel (en kg) : ")
-                    date = input_date("Date (DD/MM/YYYY) ?", default_date=current_date)
-                    execute_with_loading("Sauvegarde du poids", save_poid, worksheet_poids, date, poid)
+                    commentaire = input("Commentaire pour la séance : ")
+                    execute_with_loading("Sauvegarde du poids", save_poid, worksheet_poids, date, poid, commentaire)
                 elif choix_int == 0:
                     print("Fermeture de l'application de musculation.")
                     break
